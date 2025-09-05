@@ -42,28 +42,29 @@ function App() {
         const { result, score } = calculateResult();
         const categoryScores = calculateCategoryScores();
         
-        const completeData = {
+        // Crear datos como URLSearchParams para form-urlencoded
+        const formData = new URLSearchParams({
           timestamp: new Date().toISOString(),
           nombre: userData.name,
           email: userData.email,
           sessionId: sessionId,
           userAgent: navigator.userAgent,
-          scoreTotal: score,
-          scoreEstres: categoryScores.scoreEstres,
-          scoreAnimo: categoryScores.scoreAnimo,
-          scoreConfianza: categoryScores.scoreConfianza
-        };
+          scoreTotal: String(score),
+          scoreEstres: String(categoryScores.scoreEstres),
+          scoreAnimo: String(categoryScores.scoreAnimo),
+          scoreConfianza: String(categoryScores.scoreConfianza)
+        });
 
         await fetch('https://script.google.com/macros/s/AKfycbxa8lueCpycqO11V9z0ThpzVAIoZEkidrV-98v6rfaySvKEdLRMYu-tnRrWZK_M12fZ8Q/exec', {
           method: 'POST',
           mode: 'no-cors',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
           },
-          body: JSON.stringify(completeData)
+          body: formData.toString()
         });
         
-        console.log('Datos enviados exitosamente:', completeData);
+        console.log('Datos enviados exitosamente como form-urlencoded');
       } catch (error) {
         console.error('Error al enviar datos:', error);
       }
