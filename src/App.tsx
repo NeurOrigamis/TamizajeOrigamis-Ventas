@@ -4,8 +4,11 @@ import { RegistrationForm } from './components/RegistrationForm';
 import { QuestionCard } from './components/QuestionCard';
 import { ResultsScreen } from './components/ResultsScreen';
 import { useQuestionnaireLogic } from './hooks/useQuestionnaireLogic';
+import { sendToSheetForm } from './lib/sheets';
 
 type AppState = 'welcome' | 'registration' | 'questionnaire' | 'results';
+
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx89bHiRuSKO8N2yhHRZIvG_OGFNTwMLJIXYsGeCtvZaxFcLGRxeZCFJrMmZzRUV7lrlQ/exec';
 
 function App() {
   const [appState, setAppState] = useState<AppState>('welcome');
@@ -16,12 +19,16 @@ function App() {
     totalQuestions,
     currentAnswer,
     isCompleted,
+    showSafetyQuestion,
+    safetyAlert,
+    safetyAnswer,
     sessionId,
     answerQuestion,
     goToNextQuestion,
     goToPreviousQuestion,
     calculateResult,
     calculateCategoryScores,
+    getTriageRecommendation,
     resetQuestionnaire,
     canGoNext,
     canGoPrevious
@@ -34,41 +41,6 @@ function App() {
   const handleRegister = (name: string, email: string) => {
     setUserData({ name, email });
     setAppState('questionnaire');
-  };
-
-  const handleSubmitResults = async () => {
-    if (userData) {
-      try {
-        const { result, score } = calculateResult();
-        const categoryScores = calculateCategoryScores();
-        
-        // Crear datos como URLSearchParams para form-urlencoded
-        const formData = new URLSearchParams({
-          timestamp: new Date().toISOString(),
-          nombre: userData.name,
-          email: userData.email,
-          sessionId: sessionId,
-          userAgent: navigator.userAgent,
-          scoreTotal: String(score),
-          scoreEstres: String(categoryScores.scoreEstres),
-          scoreAnimo: String(categoryScores.scoreAnimo),
-          scoreConfianza: String(categoryScores.scoreConfianza)
-        });
-
-        await fetch('https://script.google.com/macros/s/AKfycbxa8lueCpycqO11V9z0ThpzVAIoZEkidrV-98v6rfaySvKEdLRMYu-tnRrWZK_M12fZ8Q/exec', {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-          },
-          body: formData.toString()
-        });
-        
-        console.log('Datos enviados exitosamente como form-urlencoded');
-      } catch (error) {
-        console.error('Error al enviar datos:', error);
-      }
-    }
   };
 
   const handleNext = () => {
@@ -95,13 +67,18 @@ function App() {
   if (appState === 'results') {
     const { result, score } = calculateResult();
     const categoryScores = calculateCategoryScores();
+    const triageRecommendation = getTriageRecommendation();
     return (
       <ResultsScreen 
         result={result} 
         score={score} 
         categoryScores={categoryScores}
+        triageRecommendation={triageRecommendation}
         sessionId={sessionId}
         userData={userData}
+        safetyAlert={safetyAlert}
+        safetyQuestionAnswer={safetyAnswer?.value}
+        webAppUrl={WEB_APP_URL}
         onRestart={handleRestart} 
       />
     );
@@ -110,17 +87,18 @@ function App() {
   // Questionnaire state
   return (
     <QuestionCard
-      question={currentQuestion.text}
+      question={currentQuestion}
       questionNumber={currentQuestionIndex + 1}
       totalQuestions={totalQuestions}
-      category={currentQuestion.category}
+      category={currentQuestion?.category}
       selectedAnswer={currentAnswer}
       onAnswerSelect={answerQuestion}
       onNext={handleNext}
       onPrevious={goToPreviousQuestion}
       canGoNext={canGoNext}
       canGoPrevious={canGoPrevious}
-      onSubmitResults={handleSubmitResults}
+      showSafetyQuestion={showSafetyQuestion}
+      safetyAlert={safetyAlert}
     />
   );
 }

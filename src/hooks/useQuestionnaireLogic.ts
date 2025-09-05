@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { questions, Question } from '../data/questions';
+import { questions, Question, safetyQuestion } from '../data/questions';
 
-export type AnswerValue = 0 | 1 | 2 | 3; // Nunca, A veces, Casi siempre, Siempre
+export type AnswerValue = 0 | 1 | 2 | 3; // 0=Nunca o 1 día, 1=Varios días (2-6), 2=Más de la mitad (7-11), 3=Casi todos los días (12-14)
 export type ResultType = 'green' | 'yellow' | 'red';
 
 export interface Answer {
@@ -9,57 +9,88 @@ export interface Answer {
   value: AnswerValue;
 }
 
+export interface SafetyAnswer {
+  questionId: string;
+  value: AnswerValue;
+}
+
 export const useQuestionnaireLogic = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
+  const [safetyAnswer, setSafetyAnswer] = useState<SafetyAnswer | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [showSafetyQuestion, setShowSafetyQuestion] = useState(false);
+  const [safetyAlert, setSafetyAlert] = useState(false);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
 
-  const currentQuestion = questions[currentQuestionIndex];
+  const currentQuestion = showSafetyQuestion ? null : questions[currentQuestionIndex];
   const totalQuestions = questions.length;
-  const currentAnswer = answers.find(a => a.questionId === currentQuestion?.id)?.value ?? null;
+  const currentAnswer = showSafetyQuestion 
+    ? safetyAnswer?.value ?? null
+    : answers.find(a => a.questionId === currentQuestion?.id)?.value ?? null;
 
   const answerQuestion = useCallback((value: AnswerValue) => {
-    setAnswers(prev => {
-      const existing = prev.findIndex(a => a.questionId === currentQuestion.id);
-      const newAnswer: Answer = { questionId: currentQuestion.id, value };
-      
-      if (existing !== -1) {
-        const updated = [...prev];
-        updated[existing] = newAnswer;
-        return updated;
-      } else {
-        return [...prev, newAnswer];
-      }
-    });
-  }, [currentQuestion]);
+    if (showSafetyQuestion) {
+      setSafetyAnswer({ questionId: safetyQuestion.id, value });
+    } else {
+      setAnswers(prev => {
+        const existing = prev.findIndex(a => a.questionId === currentQuestion.id);
+        const newAnswer: Answer = { questionId: currentQuestion.id, value };
+        
+        if (existing !== -1) {
+          const updated = [...prev];
+          updated[existing] = newAnswer;
+          return updated;
+        } else {
+          return [...prev, newAnswer];
+        }
+      });
+    }
+  }, [currentQuestion, showSafetyQuestion]);
 
   const goToNextQuestion = useCallback(() => {
-    if (currentQuestionIndex < totalQuestions - 1) {
+    if (showSafetyQuestion) {
+      // Verificar si hay alerta de seguridad solo cuando el usuario confirma su respuesta
+      if (safetyAnswer && safetyAnswer.value >= 1) {
+        setSafetyAlert(true);
+      }
+      setIsCompleted(true);
+    } else if (currentQuestionIndex < totalQuestions - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      setIsCompleted(true);
+      // Terminamos las preguntas principales, ahora mostramos la pregunta de seguridad
+      setShowSafetyQuestion(true);
     }
-  }, [currentQuestionIndex, totalQuestions]);
+  }, [currentQuestionIndex, totalQuestions, showSafetyQuestion, safetyAnswer]);
 
   const goToPreviousQuestion = useCallback(() => {
-    if (currentQuestionIndex > 0) {
+    if (showSafetyQuestion) {
+      setShowSafetyQuestion(false);
+    } else if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
     }
-  }, [currentQuestionIndex]);
+  }, [currentQuestionIndex, showSafetyQuestion]);
 
   const calculateResult = useCallback((): { result: ResultType; score: number } => {
-    const totalScore = answers.reduce((sum, answer) => sum + answer.value, 0);
+    // Calculamos el puntaje considerando ítems invertidos
+    const totalScore = answers.reduce((sum, answer) => {
+      const question = questions.find(q => q.id === answer.questionId);
+      if (question?.isReversed) {
+        // Para ítems invertidos, invertimos la puntuación: 0->3, 1->2, 2->1, 3->0
+        return sum + (3 - answer.value);
+      }
+      return sum + answer.value;
+    }, 0);
     
-    // Scoring logic:
-    // 0-15: Green (Bienestar Estable)
-    // 16-30: Yellow (Desgaste en Proceso)  
-    // 31-45: Red (Alerta Emocional)
+    // Puntos de corte basados en simulación:
+    // 0-17: Verde (Bienestar Estable)
+    // 18-19: Amarillo (Desgaste en Proceso)  
+    // ≥20: Rojo (Alerta Emocional)
     let result: ResultType;
     
-    if (totalScore <= 15) {
+    if (totalScore <= 17) {
       result = 'green';
-    } else if (totalScore <= 30) {
+    } else if (totalScore <= 19) {
       result = 'yellow';
     } else {
       result = 'red';
@@ -69,9 +100,9 @@ export const useQuestionnaireLogic = () => {
   }, [answers]);
 
   const calculateCategoryScores = useCallback(() => {
-    const stressQuestions = [1, 2, 3, 4, 5]; // IDs de preguntas de estrés
-    const moodQuestions = [6, 7, 8, 9, 10]; // IDs de preguntas de ánimo
-    const confidenceQuestions = [11, 12, 13, 14, 15]; // IDs de preguntas de confianza
+    const stressQuestions = [1, 2, 3, 4, 5]; // E1-E5
+    const moodQuestions = [6, 7, 8, 9, 10]; // A1-A5
+    const cognitiveQuestions = [11, 12, 13, 14, 15]; // C1-C5
 
     const scoreEstres = answers
       .filter(answer => stressQuestions.includes(answer.questionId))
@@ -79,36 +110,96 @@ export const useQuestionnaireLogic = () => {
 
     const scoreAnimo = answers
       .filter(answer => moodQuestions.includes(answer.questionId))
-      .reduce((sum, answer) => sum + answer.value, 0);
+      .reduce((sum, answer) => {
+        const question = questions.find(q => q.id === answer.questionId);
+        if (question?.isReversed) {
+          return sum + (3 - answer.value);
+        }
+        return sum + answer.value;
+      }, 0);
 
-    const scoreConfianza = answers
-      .filter(answer => confidenceQuestions.includes(answer.questionId))
-      .reduce((sum, answer) => sum + answer.value, 0);
+    const scoreControl = answers
+      .filter(answer => cognitiveQuestions.includes(answer.questionId))
+      .reduce((sum, answer) => {
+        const question = questions.find(q => q.id === answer.questionId);
+        if (question?.isReversed) {
+          return sum + (3 - answer.value);
+        }
+        return sum + answer.value;
+      }, 0);
 
-    return { scoreEstres, scoreAnimo, scoreConfianza };
+    return { scoreEstres, scoreAnimo, scoreControl };
   }, [answers]);
+
+  const getTriageRecommendation = useCallback(() => {
+    const { result, score } = calculateResult();
+    const { scoreEstres, scoreAnimo, scoreControl } = calculateCategoryScores();
+    
+    // Determinar estado de subescalas
+    const estresStatus = scoreEstres >= 6 ? 'red' : scoreEstres >= 5 ? 'yellow' : 'green';
+    const animoStatus = scoreAnimo >= 5 ? 'red' : scoreAnimo >= 5 ? 'yellow' : 'green';
+    const controlStatus = scoreControl >= 7 ? 'red' : scoreControl >= 5 ? 'yellow' : 'green';
+    
+    const redSubescales = [estresStatus, animoStatus, controlStatus].filter(s => s === 'red').length;
+    const yellowSubescales = [estresStatus, animoStatus, controlStatus].filter(s => s === 'yellow').length;
+    
+    // Reglas de triage
+    if (score >= 20 || redSubescales > 0) {
+      return {
+        priority: 'high',
+        recommendation: 'evaluación clínica prioritaria',
+        type: 'clinical'
+      };
+    } else if ((score >= 18 && score <= 19) || yellowSubescales >= 2) {
+      return {
+        priority: 'medium',
+        recommendation: 'intervención breve estructurada',
+        type: 'structured'
+      };
+    } else if (result === 'green' && (yellowSubescales === 1 || redSubescales === 0)) {
+      return {
+        priority: 'low',
+        recommendation: 'recomendaciones específicas de autocuidado',
+        type: 'selfcare'
+      };
+    }
+    
+    return {
+      priority: 'low',
+      recommendation: 'mantener hábitos de bienestar',
+      type: 'maintenance'
+    };
+  }, [calculateResult, calculateCategoryScores]);
+
   const resetQuestionnaire = useCallback(() => {
     setCurrentQuestionIndex(0);
     setAnswers([]);
+    setSafetyAnswer(null);
     setIsCompleted(false);
+    setShowSafetyQuestion(false);
+    setSafetyAlert(false);
   }, []);
 
   const canGoNext = currentAnswer !== null;
-  const canGoPrevious = currentQuestionIndex > 0;
+  const canGoPrevious = currentQuestionIndex > 0 || showSafetyQuestion;
 
   return {
-    currentQuestion,
-    currentQuestionIndex,
-    totalQuestions,
+    currentQuestion: showSafetyQuestion ? safetyQuestion : currentQuestion,
+    currentQuestionIndex: showSafetyQuestion ? totalQuestions + 1 : currentQuestionIndex,
+    totalQuestions: totalQuestions + 1, // +1 para incluir la pregunta de seguridad
     currentAnswer,
     answers,
+    safetyAnswer,
     isCompleted,
+    showSafetyQuestion,
+    safetyAlert,
     sessionId,
     answerQuestion,
     goToNextQuestion,
     goToPreviousQuestion,
     calculateResult,
     calculateCategoryScores,
+    getTriageRecommendation,
     resetQuestionnaire,
     canGoNext,
     canGoPrevious

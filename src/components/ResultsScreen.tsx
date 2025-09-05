@@ -1,5 +1,6 @@
-import React from 'react';
-import { MessageCircle, RefreshCw, Heart } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { MessageCircle, RefreshCw, Heart, AlertTriangle } from 'lucide-react';
+import { sendToSheetForm } from '../lib/sheets';
 
 interface ResultsScreenProps {
   result: 'green' | 'yellow' | 'red';
@@ -7,10 +8,18 @@ interface ResultsScreenProps {
   categoryScores: {
     scoreEstres: number;
     scoreAnimo: number;
-    scoreConfianza: number;
+    scoreControl: number;
+  };
+  triageRecommendation: {
+    priority: string;
+    recommendation: string;
+    type: string;
   };
   sessionId: string;
   userData: { name: string; email: string } | null;
+  safetyAlert?: boolean;
+  safetyQuestionAnswer?: number | string | null;
+  webAppUrl: string;
   onRestart: () => void;
 }
 
@@ -21,10 +30,10 @@ const resultData = {
     emoji: '😀',
     gradient: 'from-green-400 to-emerald-500',
     bgGradient: 'from-green-50 via-white to-emerald-50',
-    interpretation: 'Tus respuestas muestran un estado de regulación emocional adecuado. Esto significa que tu sistema nervioso mantiene un buen balance entre las demandas externas y tus propios recursos internos. Presentas capacidad para procesar el estrés cotidiano, recuperar energía y sostener un funcionamiento estable en la vida personal y laboral.',
-    professional: 'Estar en verde no implica ausencia total de dificultades, sino que indica que posees estrategias de afrontamiento activas (hábitos, redes de apoyo, recursos psicológicos) que te permiten mantener la homeostasis emocional. En este estado, la clave es la prevención: fortalecer tus recursos antes de que aparezcan señales de desgaste.',
-    recommendation: 'Continúa cultivando prácticas de autocuidado (descanso, ejercicio, espacios seguros de conversación) y busca nuevas herramientas que optimicen tu bienestar. Las personas en verde suelen beneficiarse de programas de crecimiento personal y aprendizaje en regulación emocional, que potencian la resiliencia y la eficiencia.',
-    whatsappMessage: 'Hola! Acabo de completar el Test de Estado Emocional y mi resultado fue VERDE - Bienestar Estable 🟩😀. Me gustaría obtener más información sobre recursos y herramientas prácticas para mantener mi bienestar.'
+    interpretation: 'Tus respuestas indican un funcionamiento emocional dentro de rangos esperados (puntaje 0-17). Esto sugiere que cuentas con recursos de afrontamiento adecuados para las demandas cotidianas y mantienes un equilibrio general en tu bienestar psicológico.',
+    professional: 'Un resultado verde indica capacidad de autorregulación emocional y manejo efectivo del estrés diario. Sin embargo, es importante monitorear áreas específicas que puedan requerir atención preventiva para mantener este estado de bienestar.',
+    recommendation: 'Mantén tus hábitos actuales de autocuidado y considera fortalecer áreas específicas según tus subescalas. La prevención es clave para sostener tu bienestar a largo plazo.',
+    whatsappMessage: 'Hola! Acabo de completar el Tamizaje Emocional y mi resultado fue VERDE - Bienestar Estable 🟩😀. Me gustaría obtener más información sobre recursos y herramientas prácticas para mantener mi bienestar.'
   },
   yellow: {
     color: '🟨',
@@ -32,10 +41,10 @@ const resultData = {
     emoji: '😐',
     gradient: 'from-yellow-400 to-orange-500',
     bgGradient: 'from-yellow-50 via-white to-orange-50',
-    interpretation: 'Tus respuestas reflejan un estado intermedio de regulación, donde ya se evidencian signos de fatiga psicológica: menor motivación, sensación de esfuerzo sostenido y dificultad para mantener hábitos de autocuidado o concentración plena. Esto indica que tu sistema nervioso está funcionando en una fase de sobrecarga compensada, es decir, que sigues respondiendo, pero a un costo energético mayor.',
-    professional: 'La literatura en psicología de la salud muestra que este nivel corresponde a una fase de riesgo moderado, en la que las tensiones no resueltas comienzan a acumularse y afectar de manera progresiva el bienestar. Intervenir en este punto resulta altamente efectivo: evita la cronificación del malestar y favorece una recuperación más rápida y sostenida.',
-    recommendation: 'Este es el momento de buscar acompañamiento estructurado, ya sea a través de procesos terapéuticos breves para el manejo emocional, o coaching focalizado en organización, hábitos y claridad mental. El objetivo es recuperar equilibrio antes de pasar a un estado rojo, logrando mayor claridad, calma y energía disponible.',
-    whatsappMessage: 'Hola! Acabo de completar el Test de Estado Emocional y mi resultado fue AMARILLO - Desgaste en Proceso. Me interesa agendar una sesión de diagnóstico personal para recuperar mi equilibrio emocional.'
+    interpretation: 'Tus respuestas sugieren un nivel moderado de malestar emocional (puntaje 18-19). Esto indica la presencia de síntomas que pueden estar interfiriendo con tu funcionamiento diario y requieren atención para prevenir un mayor deterioro.',
+    professional: 'Este rango sugiere la necesidad de intervención temprana. La evidencia muestra que la atención oportuna en esta fase puede prevenir la progresión hacia niveles más severos de malestar y facilitar una recuperación más efectiva.',
+    recommendation: 'Se recomienda una intervención breve estructurada que incluya psicoeducación, desarrollo de hábitos saludables y técnicas de regulación emocional. El apoyo profesional en esta etapa es altamente beneficioso.',
+    whatsappMessage: 'Hola! Acabo de completar el Tamizaje Emocional y mi resultado fue AMARILLO - Desgaste en Proceso. Me interesa agendar una sesión de diagnóstico personal para recuperar mi equilibrio emocional.'
   },
   red: {
     color: '🟥',
@@ -43,15 +52,49 @@ const resultData = {
     emoji: '😟',
     gradient: 'from-red-400 to-red-600',
     bgGradient: 'from-red-50 via-white to-pink-50',
-    interpretation: 'Tus respuestas indican un estado de alta desregulación emocional, caracterizado por ansiedad persistente, dificultades de sueño, pensamientos recurrentes y sensación de falta de recursos internos. Esto corresponde a un nivel crítico en la autorregulación neuropsicológica, donde el sistema nervioso permanece en modo de alerta constante y pierde capacidad de recuperación espontánea.',
-    professional: 'La evidencia clínica muestra que permanecer en este estado aumenta el riesgo de deterioro en la salud física, en las relaciones y en el rendimiento laboral. No se trata de un signo de debilidad, sino de un indicador de que tus mecanismos de afrontamiento actuales no son suficientes frente a las exigencias que enfrentas. Este resultado debe interpretarse como una señal clara de intervención inmediata.',
-    recommendation: 'Es fundamental contactar a un especialista de manera prioritaria, para recibir apoyo que restaure la estabilidad emocional y fisiológica. La intervención temprana es clave: permite reducir los síntomas, prevenir complicaciones mayores y recuperar una base sólida de bienestar. Pedir ayuda en esta fase no es un signo de fragilidad, sino un acto de responsabilidad con tu salud y tu entorno.',
-    whatsappMessage: 'Hola! Acabo de completar el Test de Estado Emocional y mi resultado fue ROJO - Alerta Emocional. Me gustaría contactar con su equipo de apoyo de manera prioritaria para recibir asistencia profesional.'
+    interpretation: 'Tus respuestas indican un nivel significativo de malestar emocional (puntaje ≥20). Esto sugiere la presencia de síntomas que probablemente están afectando considerablemente tu funcionamiento diario y bienestar general.',
+    professional: 'Este nivel de puntuación indica la necesidad de evaluación clínica prioritaria. Los síntomas reportados requieren atención profesional especializada para una evaluación comprehensiva y el desarrollo de un plan de tratamiento adecuado.',
+    recommendation: 'Se recomienda encarecidamente buscar evaluación clínica prioritaria con un profesional de salud mental. La intervención temprana es fundamental para abordar efectivamente los síntomas y prevenir mayor deterioro.',
+    whatsappMessage: 'Hola! Acabo de completar el Tamizaje Emocional y mi resultado fue ROJO - Alerta Emocional. Me gustaría contactar con su equipo de apoyo de manera prioritaria para recibir asistencia profesional.'
   }
 };
 
-export const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, score, categoryScores, sessionId, userData, onRestart }) => {
+export const ResultsScreen: React.FC<ResultsScreenProps> = ({ 
+  result, 
+  score, 
+  categoryScores, 
+  triageRecommendation, 
+  sessionId, 
+  userData, 
+  safetyAlert = false, 
+  safetyQuestionAnswer,
+  webAppUrl,
+  onRestart 
+}) => {
   const data = resultData[result];
+  const sentRef = useRef(false);
+
+  // Enviar datos a Google Sheets después de renderizar
+  useEffect(() => {
+    if (sentRef.current) return; // evita doble ejecución (StrictMode / re-render)
+    sentRef.current = true;
+
+    if (userData) {
+      void sendToSheetForm({
+        timestamp: new Date().toISOString(),
+        nombre: userData.name,
+        email: userData.email,
+        sessionId,
+        userAgent: navigator.userAgent,
+        scoreTotal: score,
+        scoreEstres: categoryScores.scoreEstres,
+        scoreAnimo: categoryScores.scoreAnimo,
+        scoreConfianza: categoryScores.scoreControl,
+        safetyQuestionAnswer: safetyQuestionAnswer ?? '',
+        webAppUrl
+      });
+    }
+  }, [userData, sessionId, score, categoryScores, safetyQuestionAnswer, webAppUrl]);
   
   const handleWhatsAppContact = () => {
     const phoneNumber = '56930179724';
@@ -63,10 +106,44 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, score, cat
     window.open(whatsappUrl, '_blank');
   };
 
+  // Función para determinar el estado de las subescalas
+  const getSubescaleStatus = (score: number, type: 'stress' | 'mood' | 'control') => {
+    if (type === 'stress') {
+      return score >= 6 ? 'red' : score >= 5 ? 'yellow' : 'green';
+    } else if (type === 'mood') {
+      return score >= 5 ? 'red' : score >= 5 ? 'yellow' : 'green';
+    } else { // control
+      return score >= 7 ? 'red' : score >= 5 ? 'yellow' : 'green';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'red': return 'text-red-600 bg-red-100';
+      case 'yellow': return 'text-yellow-600 bg-yellow-100';
+      default: return 'text-green-600 bg-green-100';
+    }
+  };
+
   return (
     <div className={`min-h-screen bg-gradient-to-br ${data.bgGradient} py-8 px-4`}>
       <div className="max-w-4xl mx-auto">
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+          {/* Safety Alert Banner */}
+          {safetyAlert && (
+            <div className="bg-red-600 text-white p-6">
+              <div className="flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 mr-3" />
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold">Atención Prioritaria Requerida</h3>
+                  <p className="text-sm mt-1">
+                    Hemos detectado indicadores que requieren atención inmediata. Te recomendamos contactar con un profesional de la salud mental.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className={`bg-gradient-to-r ${data.gradient} p-8 text-white text-center`}>
             <div className="text-6xl mb-4">{data.emoji}</div>
@@ -95,11 +172,36 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, score, cat
               <p className="text-gray-600">Puntuación total de 45 puntos posibles</p>
             </div>
 
+            {/* Subescales */}
+            <div className="bg-gray-50 rounded-2xl p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Análisis por áreas:</h2>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="text-center">
+                  <h3 className="font-semibold text-gray-700 mb-2">Estrés/Ansiedad</h3>
+                  <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(getSubescaleStatus(categoryScores.scoreEstres, 'stress'))}`}>
+                    {categoryScores.scoreEstres}/15
+                  </div>
+                </div>
+                <div className="text-center">
+                  <h3 className="font-semibold text-gray-700 mb-2">Ánimo/Anhedonia</h3>
+                  <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(getSubescaleStatus(categoryScores.scoreAnimo, 'mood'))}`}>
+                    {categoryScores.scoreAnimo}/15
+                  </div>
+                </div>
+                <div className="text-center">
+                  <h3 className="font-semibold text-gray-700 mb-2">Control/Rumiación</h3>
+                  <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(getSubescaleStatus(categoryScores.scoreControl, 'control'))}`}>
+                    {categoryScores.scoreControl}/15
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Interpretation */}
             <div className="bg-gray-50 rounded-2xl p-6">
               <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
                 <Heart className="w-6 h-6 mr-2 text-red-500" />
-                Interpretación técnica:
+                Lo que tus respuestas nos dicen:
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 {data.interpretation}
@@ -109,17 +211,34 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, score, cat
             {/* Professional Reading */}
             <div className="bg-blue-50 rounded-2xl p-6">
               <h2 className="text-xl font-bold text-gray-800 mb-4">
-                Lectura profesional:
+                Una mirada experta:
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 {data.professional}
               </p>
             </div>
 
+            {/* Triage Recommendation */}
+            <div className={`bg-gradient-to-r ${triageRecommendation.priority === 'high' ? 'from-red-100 to-red-50' : triageRecommendation.priority === 'medium' ? 'from-yellow-100 to-yellow-50' : 'from-green-100 to-green-50'} rounded-2xl p-6`}>
+              <h2 className="text-xl font-bold text-gray-800 mb-4">
+                Recomendación específica:
+              </h2>
+              <p className="text-gray-700 leading-relaxed mb-3">
+                Basado en tu puntuación y perfil de respuestas, se sugiere: <strong>{triageRecommendation.recommendation}</strong>
+              </p>
+              {triageRecommendation.type === 'clinical' && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-800 font-medium">
+                    ⚠️ Tu puntuación indica la necesidad de evaluación profesional prioritaria.
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Recommendation */}
             <div className={`bg-gradient-to-r ${data.gradient} bg-opacity-10 rounded-2xl p-6`}>
               <h2 className="text-xl font-bold text-gray-800 mb-4">
-                Recomendación:
+                Próximos pasos:
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 {data.recommendation}
@@ -130,10 +249,10 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, score, cat
             <div className="flex flex-col sm:flex-row gap-4 pt-6">
               <button
                 onClick={handleWhatsAppContact}
-                className={`flex-1 bg-gradient-to-r ${data.gradient} text-white font-semibold py-4 px-8 rounded-2xl hover:opacity-90 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2`}
+                className={`flex-1 bg-gradient-to-r ${safetyAlert ? 'from-red-600 to-red-700' : data.gradient} text-white font-semibold py-4 px-8 rounded-2xl hover:opacity-90 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2`}
               >
                 <MessageCircle className="w-5 h-5" />
-                <span>Contactar por WhatsApp</span>
+                <span>{safetyAlert ? 'Contacto Prioritario' : 'Quiero acompañamiento'}</span>
               </button>
 
               <button
@@ -148,9 +267,17 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, score, cat
             {/* Disclaimer */}
             <div className="text-center text-sm text-gray-500 pt-4 border-t border-gray-200">
               <p>
-                Este test es una herramienta de orientación y no sustituye la evaluación profesional.
-                Si experimentas malestar persistente, consulta con un especialista.
+                ⚠️ IMPORTANTE: Este es un cuestionario de tamizaje, no un diagnóstico clínico.
               </p>
+              <p>
+                Los resultados son orientativos y no reemplazan la evaluación de un profesional de la salud mental.
+                Si experimentas malestar significativo o persistente, busca ayuda profesional.
+              </p>
+              {safetyAlert && (
+                <p className="text-red-600 font-medium mt-2">
+                  Si tienes pensamientos de autolesión, contacta inmediatamente: Salud Responde 600 360 7777 o acude a urgencias.
+                </p>
+              )}
             </div>
           </div>
         </div>
