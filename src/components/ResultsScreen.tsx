@@ -53,40 +53,6 @@ const resultData = {
 export const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, score, categoryScores, sessionId, userData, onRestart }) => {
   const data = resultData[result];
   
-  // Enviar datos completos a Google Sheets cuando se muestran los resultados
-  React.useEffect(() => {
-    if (userData) {
-      const sendCompleteData = async () => {
-        try {
-          const completeData = {
-            timestamp: new Date().toISOString(),
-            nombre: userData.name,
-            email: userData.email,
-            sessionId: sessionId,
-            userAgent: navigator.userAgent,
-            scoreTotal: score,
-            scoreEstres: categoryScores.scoreEstres,
-            scoreAnimo: categoryScores.scoreAnimo,
-            scoreConfianza: categoryScores.scoreConfianza
-          };
-
-          await fetch('https://script.google.com/macros/s/AKfycbwZ7HLswtDhWhkvEu583zzrvJTUffXFtdPTxyj1qKSbfwTfqQNuucUYVJJ5Lz4XOubnUw/exec', {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(completeData)
-          });
-        } catch (error) {
-          console.error('Error al enviar datos completos:', error);
-        }
-      };
-
-      sendCompleteData();
-    }
-  }, [userData, sessionId, score, categoryScores]);
-
   const handleWhatsAppContact = () => {
     const phoneNumber = '56930179724';
     const personalizedMessage = userData 

@@ -36,6 +36,40 @@ function App() {
     setAppState('questionnaire');
   };
 
+  const handleSubmitResults = async () => {
+    if (userData) {
+      try {
+        const { result, score } = calculateResult();
+        const categoryScores = calculateCategoryScores();
+        
+        const completeData = {
+          timestamp: new Date().toISOString(),
+          nombre: userData.name,
+          email: userData.email,
+          sessionId: sessionId,
+          userAgent: navigator.userAgent,
+          scoreTotal: score,
+          scoreEstres: categoryScores.scoreEstres,
+          scoreAnimo: categoryScores.scoreAnimo,
+          scoreConfianza: categoryScores.scoreConfianza
+        };
+
+        await fetch('https://script.google.com/macros/s/AKfycbxa8lueCpycqO11V9z0ThpzVAIoZEkidrV-98v6rfaySvKEdLRMYu-tnRrWZK_M12fZ8Q/exec', {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(completeData)
+        });
+        
+        console.log('Datos enviados exitosamente:', completeData);
+      } catch (error) {
+        console.error('Error al enviar datos:', error);
+      }
+    }
+  };
+
   const handleNext = () => {
     goToNextQuestion();
     if (isCompleted) {
@@ -85,6 +119,7 @@ function App() {
       onPrevious={goToPreviousQuestion}
       canGoNext={canGoNext}
       canGoPrevious={canGoPrevious}
+      onSubmitResults={handleSubmitResults}
     />
   );
 }

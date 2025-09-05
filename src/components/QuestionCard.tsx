@@ -12,6 +12,7 @@ interface QuestionCardProps {
   onPrevious: () => void;
   canGoNext: boolean;
   canGoPrevious: boolean;
+  onSubmitResults?: () => void;
 }
 
 const emojiOptions = [
@@ -37,8 +38,16 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   onNext,
   onPrevious,
   canGoNext,
-  canGoPrevious
+  canGoPrevious,
+  onSubmitResults
 }) => {
+  const handleNext = () => {
+    if (questionNumber === totalQuestions && onSubmitResults) {
+      onSubmitResults();
+    }
+    onNext();
+  };
+
   const progress = (questionNumber / totalQuestions) * 100;
   const categoryColor = categoryColors[category as keyof typeof categoryColors] || 'from-blue-500 to-purple-500';
 
@@ -110,7 +119,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               </div>
 
               <button
-                onClick={onNext}
+                onClick={handleNext}
                 disabled={!canGoNext}
                 className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
                   canGoNext
