@@ -4,6 +4,13 @@ import { MessageCircle, RefreshCw, Heart } from 'lucide-react';
 interface ResultsScreenProps {
   result: 'green' | 'yellow' | 'red';
   score: number;
+  categoryScores: {
+    scoreEstres: number;
+    scoreAnimo: number;
+    scoreConfianza: number;
+  };
+  sessionId: string;
+  userData: { name: string; email: string } | null;
   onRestart: () => void;
 }
 
@@ -38,17 +45,54 @@ const resultData = {
     bgGradient: 'from-red-50 via-white to-pink-50',
     interpretation: 'Tus respuestas indican un estado de alta desregulación emocional, caracterizado por ansiedad persistente, dificultades de sueño, pensamientos recurrentes y sensación de falta de recursos internos. Esto corresponde a un nivel crítico en la autorregulación neuropsicológica, donde el sistema nervioso permanece en modo de alerta constante y pierde capacidad de recuperación espontánea.',
     professional: 'La evidencia clínica muestra que permanecer en este estado aumenta el riesgo de deterioro en la salud física, en las relaciones y en el rendimiento laboral. No se trata de un signo de debilidad, sino de un indicador de que tus mecanismos de afrontamiento actuales no son suficientes frente a las exigencias que enfrentas. Este resultado debe interpretarse como una señal clara de intervención inmediata.',
-    recommendation: 'Es fundamental contactar a un especialista de manera urgente, para recibir apoyo que restaure la estabilidad emocional y fisiológica. La intervención temprana es clave: permite reducir los síntomas, prevenir complicaciones mayores y recuperar una base sólida de bienestar. Pedir ayuda en esta fase no es un signo de fragilidad, sino un acto de responsabilidad con tu salud y tu entorno.',
-    whatsappMessage: 'Hola! Acabo de completar el Test de Estado Emocional y mi resultado fue ROJO - Alerta Emocional. Necesito contactar con su equipo de apoyo de manera urgente para recibir asistencia profesional.'
+    recommendation: 'Es fundamental contactar a un especialista de manera prioritaria, para recibir apoyo que restaure la estabilidad emocional y fisiológica. La intervención temprana es clave: permite reducir los síntomas, prevenir complicaciones mayores y recuperar una base sólida de bienestar. Pedir ayuda en esta fase no es un signo de fragilidad, sino un acto de responsabilidad con tu salud y tu entorno.',
+    whatsappMessage: 'Hola! Acabo de completar el Test de Estado Emocional y mi resultado fue ROJO - Alerta Emocional. Me gustaría contactar con su equipo de apoyo de manera prioritaria para recibir asistencia profesional.'
   }
 };
 
-export const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, score, onRestart }) => {
+export const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, score, categoryScores, sessionId, userData, onRestart }) => {
   const data = resultData[result];
   
+  // Enviar datos completos a Google Sheets cuando se muestran los resultados
+  React.useEffect(() => {
+    if (userData) {
+      const sendCompleteData = async () => {
+        try {
+          const completeData = {
+            timestamp: new Date().toISOString(),
+            nombre: userData.name,
+            email: userData.email,
+            sessionId: sessionId,
+            userAgent: navigator.userAgent,
+            scoreTotal: score,
+            scoreEstres: categoryScores.scoreEstres,
+            scoreAnimo: categoryScores.scoreAnimo,
+            scoreConfianza: categoryScores.scoreConfianza
+          };
+
+          await fetch('https://script.google.com/macros/s/AKfycbwZ7HLswtDhWhkvEu583zzrvJTUffXFtdPTxyj1qKSbfwTfqQNuucUYVJJ5Lz4XOubnUw/exec', {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(completeData)
+          });
+        } catch (error) {
+          console.error('Error al enviar datos completos:', error);
+        }
+      };
+
+      sendCompleteData();
+    }
+  }, [userData, sessionId, score, categoryScores]);
+
   const handleWhatsAppContact = () => {
     const phoneNumber = '56930179724';
-    const message = encodeURIComponent(data.whatsappMessage);
+    const personalizedMessage = userData 
+      ? `Hola! Soy ${userData.name}, acabo de completar el Test de Estado Emocional y mi resultado fue ${data.title.split(' – ')[1]} ${data.color}. ${data.whatsappMessage.split('. ')[1]}`
+      : data.whatsappMessage;
+    const message = encodeURIComponent(personalizedMessage);
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -71,6 +115,14 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, score, onR
           <div className="p-8 md:p-12 space-y-8">
             {/* Score */}
             <div className="text-center">
+              {userData && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    Hola {userData.name} 👋
+                  </h3>
+                  <p className="text-gray-600">Aquí están tus resultados personalizados</p>
+                </div>
+              )}
               <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
                 <span className="text-2xl font-bold text-gray-700">{score}</span>
               </div>

@@ -13,6 +13,7 @@ export const useQuestionnaireLogic = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
 
   const currentQuestion = questions[currentQuestionIndex];
   const totalQuestions = questions.length;
@@ -67,6 +68,25 @@ export const useQuestionnaireLogic = () => {
     return { result, score: totalScore };
   }, [answers]);
 
+  const calculateCategoryScores = useCallback(() => {
+    const stressQuestions = [1, 2, 3, 4, 5]; // IDs de preguntas de estrés
+    const moodQuestions = [6, 7, 8, 9, 10]; // IDs de preguntas de ánimo
+    const confidenceQuestions = [11, 12, 13, 14, 15]; // IDs de preguntas de confianza
+
+    const scoreEstres = answers
+      .filter(answer => stressQuestions.includes(answer.questionId))
+      .reduce((sum, answer) => sum + answer.value, 0);
+
+    const scoreAnimo = answers
+      .filter(answer => moodQuestions.includes(answer.questionId))
+      .reduce((sum, answer) => sum + answer.value, 0);
+
+    const scoreConfianza = answers
+      .filter(answer => confidenceQuestions.includes(answer.questionId))
+      .reduce((sum, answer) => sum + answer.value, 0);
+
+    return { scoreEstres, scoreAnimo, scoreConfianza };
+  }, [answers]);
   const resetQuestionnaire = useCallback(() => {
     setCurrentQuestionIndex(0);
     setAnswers([]);
@@ -83,10 +103,12 @@ export const useQuestionnaireLogic = () => {
     currentAnswer,
     answers,
     isCompleted,
+    sessionId,
     answerQuestion,
     goToNextQuestion,
     goToPreviousQuestion,
     calculateResult,
+    calculateCategoryScores,
     resetQuestionnaire,
     canGoNext,
     canGoPrevious

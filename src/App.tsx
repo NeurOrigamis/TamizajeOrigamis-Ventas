@@ -1,29 +1,38 @@
 import React, { useState } from 'react';
 import { WelcomeScreen } from './components/WelcomeScreen';
+import { RegistrationForm } from './components/RegistrationForm';
 import { QuestionCard } from './components/QuestionCard';
 import { ResultsScreen } from './components/ResultsScreen';
 import { useQuestionnaireLogic } from './hooks/useQuestionnaireLogic';
 
-type AppState = 'welcome' | 'questionnaire' | 'results';
+type AppState = 'welcome' | 'registration' | 'questionnaire' | 'results';
 
 function App() {
   const [appState, setAppState] = useState<AppState>('welcome');
+  const [userData, setUserData] = useState<{ name: string; email: string } | null>(null);
   const {
     currentQuestion,
     currentQuestionIndex,
     totalQuestions,
     currentAnswer,
     isCompleted,
+    sessionId,
     answerQuestion,
     goToNextQuestion,
     goToPreviousQuestion,
     calculateResult,
+    calculateCategoryScores,
     resetQuestionnaire,
     canGoNext,
     canGoPrevious
   } = useQuestionnaireLogic();
 
   const handleStart = () => {
+    setAppState('registration');
+  };
+
+  const handleRegister = (name: string, email: string) => {
+    setUserData({ name, email });
     setAppState('questionnaire');
   };
 
@@ -36,6 +45,7 @@ function App() {
 
   const handleRestart = () => {
     resetQuestionnaire();
+    setUserData(null);
     setAppState('welcome');
   };
 
@@ -43,9 +53,23 @@ function App() {
     return <WelcomeScreen onStart={handleStart} />;
   }
 
+  if (appState === 'registration') {
+    return <RegistrationForm onRegister={handleRegister} />;
+  }
+
   if (appState === 'results') {
     const { result, score } = calculateResult();
-    return <ResultsScreen result={result} score={score} onRestart={handleRestart} />;
+    const categoryScores = calculateCategoryScores();
+    return (
+      <ResultsScreen 
+        result={result} 
+        score={score} 
+        categoryScores={categoryScores}
+        sessionId={sessionId}
+        userData={userData}
+        onRestart={handleRestart} 
+      />
+    );
   }
 
   // Questionnaire state
