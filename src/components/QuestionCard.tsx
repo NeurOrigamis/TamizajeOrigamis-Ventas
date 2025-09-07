@@ -17,10 +17,10 @@ interface QuestionCardProps {
 }
 
 const answerOptions = [
-  { label: 'Nunca o 1 día', value: 0, color: 'from-green-400 to-green-500' },
-  { label: 'Varios días (2-6)', value: 1, color: 'from-yellow-400 to-yellow-500' },
-  { label: 'Más de la mitad (7-11)', value: 2, color: 'from-orange-400 to-orange-500' },
-  { label: 'Casi todos los días (12-14)', value: 3, color: 'from-red-400 to-red-500' }
+  { label: 'Nunca o 1 día', value: 0, color: 'from-green-400 to-green-500', emoji: '😊' },
+  { label: 'Varios días (2-6)', value: 1, color: 'from-yellow-400 to-yellow-500', emoji: '😐' },
+  { label: 'Más de la mitad (7-11)', value: 2, color: 'from-orange-400 to-orange-500', emoji: '😟' },
+  { label: 'Casi todos los días (12-14)', value: 3, color: 'from-red-400 to-red-500', emoji: '😩' }
 ];
 
 const categoryColors = {
@@ -141,6 +141,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                       <div className={`text-lg font-medium mb-1 ${
                         selectedAnswer === option.value ? 'text-white' : 'text-gray-800'
                       }`}>
+                        <span className="mr-3 text-xl">{option.emoji}</span>
                         {option.label}
                       </div>
                     </div>
