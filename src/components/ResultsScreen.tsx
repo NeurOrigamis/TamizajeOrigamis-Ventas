@@ -3,7 +3,7 @@ import { MessageCircle, RefreshCw, Heart, AlertTriangle } from 'lucide-react';
 import { sendToSheetForm } from '../lib/sheets';
 
 interface ResultsScreenProps {
-  result: 'green' | 'yellow' | 'red';
+  result: 'green' | 'yellow' | 'orange' | 'red';
   score: number;
   categoryScores: {
     scoreEstres: number;
@@ -26,36 +26,47 @@ interface ResultsScreenProps {
 const resultData = {
   green: {
     color: '🟩',
-    title: 'VERDE – Bienestar Estable',
+    title: '¡Todo bien! 🌟 Estás en verde',
     emoji: '😀',
     gradient: 'from-green-400 to-emerald-500',
     bgGradient: 'from-green-50 via-white to-emerald-50',
-    interpretation: 'Tus respuestas indican un funcionamiento emocional dentro de rangos esperados (puntaje 0-17). Esto sugiere que cuentas con recursos de afrontamiento adecuados para las demandas cotidianas y mantienes un equilibrio general en tu bienestar psicológico.',
-    professional: 'Un resultado verde indica capacidad de autorregulación emocional y manejo efectivo del estrés diario. Sin embargo, es importante monitorear áreas específicas que puedan requerir atención preventiva para mantener este estado de bienestar.',
-    recommendation: 'Mantén tus hábitos actuales de autocuidado y considera fortalecer áreas específicas según tus subescalas. La prevención es clave para sostener tu bienestar a largo plazo.',
-    whatsappMessage: 'Hola! Acabo de completar el Tamizaje Emocional y mi resultado fue VERDE - Bienestar Estable 🟩😀. Me gustaría obtener más información sobre recursos y herramientas prácticas para mantener mi bienestar.'
+    interpretation: '¡Qué bueno! 😊 Tus respuestas muestran que estás manejando bien las cosas del día a día. Tienes buenas herramientas para lidiar con el estrés y mantienes un buen equilibrio emocional. ¡Sigue así! 💪',
+    professional: 'Tu resultado verde significa que tienes buena capacidad para manejar tus emociones y el estrés diario 🧠✨. Aunque estés bien, siempre es bueno estar atento a cómo te sientes para mantener este bienestar.',
+    recommendation: 'Sigue haciendo lo que estás haciendo 👏. Mantén tus buenos hábitos y tal vez puedas mejorar en algunas áreas específicas. ¡La prevención es la clave! 🔑',
+    whatsappMessage: 'Hola! Acabo de hacer el test emocional y salí en VERDE 🟩😀. Me gustaría saber más sobre cómo mantener mi bienestar y seguir mejorando.'
   },
   yellow: {
     color: '🟨',
-    title: 'AMARILLO – Desgaste en Proceso',
+    title: 'Ojo aquí 👀 Estás en amarillo',
     emoji: '😐',
     gradient: 'from-yellow-400 to-orange-500',
     bgGradient: 'from-yellow-50 via-white to-orange-50',
-    interpretation: 'Tus respuestas sugieren un nivel moderado de malestar emocional (puntaje 18-19). Esto indica la presencia de síntomas que pueden estar interfiriendo con tu funcionamiento diario y requieren atención para prevenir un mayor deterioro.',
-    professional: 'Este rango sugiere la necesidad de intervención temprana. La evidencia muestra que la atención oportuna en esta fase puede prevenir la progresión hacia niveles más severos de malestar y facilitar una recuperación más efectiva.',
-    recommendation: 'Se recomienda una intervención breve estructurada que incluya psicoeducación, desarrollo de hábitos saludables y técnicas de regulación emocional. El apoyo profesional en esta etapa es altamente beneficioso.',
-    whatsappMessage: 'Hola! Acabo de completar el Tamizaje Emocional y mi resultado fue AMARILLO - Desgaste en Proceso. Me interesa agendar una sesión de diagnóstico personal para recuperar mi equilibrio emocional.'
+    interpretation: 'Mmm, parece que las cosas se están poniendo un poquito pesadas 😅. Tus respuestas muestran que hay algunas cositas que te están afectando más de lo normal. No es grave, pero sí es momento de poner atención 🚨.',
+    professional: 'Tu resultado amarillo nos dice que es buen momento para actuar 🎯. Si le ponemos atención ahora, podemos evitar que las cosas se compliquen más adelante. ¡Es súper normal y tiene solución! 💡',
+    recommendation: 'Te recomendamos buscar un poco de apoyo profesional 🤝. Unas sesiones cortas pueden ayudarte muchísimo a recuperar tu equilibrio. ¡No esperes más! ⏰',
+    whatsappMessage: 'Hola! Acabo de hacer el test emocional y salí en AMARILLO 🟨. Me gustaría agendar una sesión para recuperar mi equilibrio emocional.'
+  },
+  orange: {
+    color: '🟧',
+    title: 'Alerta moderada 🔶 Estás en naranjo',
+    emoji: '😰',
+    gradient: 'from-orange-400 to-red-500',
+    bgGradient: 'from-orange-50 via-white to-red-50',
+    interpretation: 'Oye, las cosas se están poniendo complicadas 😰. Tus respuestas nos muestran que hay varias áreas que te están afectando bastante. Es momento de tomar acción más decidida 💪.',
+    professional: 'Tu resultado naranjo indica que necesitas apoyo profesional pronto 🎯. Los síntomas que describes están impactando tu día a día de manera significativa, pero con ayuda adecuada puedes mejorar mucho 🌟.',
+    recommendation: 'Te recomendamos buscar ayuda profesional en las próximas semanas 📅. No esperes a que las cosas empeoren, es el momento perfecto para actuar 🚀.',
+    whatsappMessage: 'Hola! Acabo de hacer el test emocional y salí en NARANJO 🟧. Necesito agendar una evaluación profesional pronto para mejorar mi situación.'
   },
   red: {
     color: '🟥',
-    title: 'ROJO – Alerta Emocional',
+    title: 'Necesitas apoyo ya 🚨 Estás en rojo',
     emoji: '😟',
     gradient: 'from-red-400 to-red-600',
     bgGradient: 'from-red-50 via-white to-pink-50',
-    interpretation: 'Tus respuestas indican un nivel significativo de malestar emocional (puntaje ≥20). Esto sugiere la presencia de síntomas que probablemente están afectando considerablemente tu funcionamiento diario y bienestar general.',
-    professional: 'Este nivel de puntuación indica la necesidad de evaluación clínica prioritaria. Los síntomas reportados requieren atención profesional especializada para una evaluación comprehensiva y el desarrollo de un plan de tratamiento adecuado.',
-    recommendation: 'Se recomienda encarecidamente buscar evaluación clínica prioritaria con un profesional de salud mental. La intervención temprana es fundamental para abordar efectivamente los síntomas y prevenir mayor deterioro.',
-    whatsappMessage: 'Hola! Acabo de completar el Tamizaje Emocional y mi resultado fue ROJO - Alerta Emocional. Me gustaría contactar con su equipo de apoyo de manera prioritaria para recibir asistencia profesional.'
+    interpretation: 'Hey, sabemos que las cosas están difíciles ahora mismo 💔. Tus respuestas nos muestran que realmente necesitas apoyo profesional. No estás solo/a en esto y hay ayuda disponible 🤗.',
+    professional: 'Tu resultado rojo nos dice que es súper importante que busques ayuda profesional pronto 🏥💜. Los síntomas que describes están afectando tu día a día, pero con el apoyo adecuado puedes sentirte mejor.',
+    recommendation: 'Por favor, busca ayuda profesional lo antes posible 🙏. Un psicólogo o psiquiatra puede ayudarte muchísimo. ¡No lo dejes para después! Tu bienestar es lo más importante 💝.',
+    whatsappMessage: 'Hola! Acabo de hacer el test emocional y salí en ROJO 🟥. Necesito contactar con su equipo de apoyo de manera prioritaria para recibir ayuda profesional.'
   }
 };
 
@@ -148,7 +159,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
           <div className={`bg-gradient-to-r ${data.gradient} p-8 text-white text-center`}>
             <div className="text-6xl mb-4">{data.emoji}</div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">
-              📊 Tu Semáforo Emocional
+              🎯 ¡Aquí están tus resultados!
             </h1>
             <div className="text-xl opacity-90">
               {data.color} {data.title}
@@ -174,22 +185,22 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
 
             {/* Subescales */}
             <div className="bg-gray-50 rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Análisis por áreas:</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-4">📊 Cómo te fue en cada área:</h2>
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="text-center">
-                  <h3 className="font-semibold text-gray-700 mb-2">Estrés/Ansiedad</h3>
+                  <h3 className="font-semibold text-gray-700 mb-2">😰 Estrés/Ansiedad</h3>
                   <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(getSubescaleStatus(categoryScores.scoreEstres, 'stress'))}`}>
                     {categoryScores.scoreEstres}/15
                   </div>
                 </div>
                 <div className="text-center">
-                  <h3 className="font-semibold text-gray-700 mb-2">Ánimo/Anhedonia</h3>
+                  <h3 className="font-semibold text-gray-700 mb-2">😔 Ánimo/Energía</h3>
                   <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(getSubescaleStatus(categoryScores.scoreAnimo, 'mood'))}`}>
                     {categoryScores.scoreAnimo}/15
                   </div>
                 </div>
                 <div className="text-center">
-                  <h3 className="font-semibold text-gray-700 mb-2">Control/Rumiación</h3>
+                  <h3 className="font-semibold text-gray-700 mb-2">🧠 Control Mental</h3>
                   <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(getSubescaleStatus(categoryScores.scoreControl, 'control'))}`}>
                     {categoryScores.scoreControl}/15
                   </div>
@@ -200,8 +211,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
             {/* Interpretation */}
             <div className="bg-gray-50 rounded-2xl p-6">
               <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                <Heart className="w-6 h-6 mr-2 text-red-500" />
-                Lo que tus respuestas nos dicen:
+                💬 En palabras simples:
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 {data.interpretation}
@@ -211,7 +221,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
             {/* Professional Reading */}
             <div className="bg-blue-50 rounded-2xl p-6">
               <h2 className="text-xl font-bold text-gray-800 mb-4">
-                Una mirada experta:
+                🔍 Lo que esto significa:
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 {data.professional}
@@ -219,17 +229,25 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
             </div>
 
             {/* Triage Recommendation */}
-            <div className={`bg-gradient-to-r ${triageRecommendation.priority === 'high' ? 'from-red-100 to-red-50' : triageRecommendation.priority === 'medium' ? 'from-yellow-100 to-yellow-50' : 'from-green-100 to-green-50'} rounded-2xl p-6`}>
+            <div className={`bg-gradient-to-r ${
+              triageRecommendation.priority === 'high' ? 'from-red-100 to-red-50' : 
+              triageRecommendation.priority === 'medium-high' ? 'from-orange-100 to-orange-50' :
+              triageRecommendation.priority === 'medium' ? 'from-yellow-100 to-yellow-50' : 
+              'from-green-100 to-green-50'
+            } rounded-2xl p-6`}>
               <h2 className="text-xl font-bold text-gray-800 mb-4">
-                Recomendación específica:
+                💡 Nuestra recomendación:
               </h2>
               <p className="text-gray-700 leading-relaxed mb-3">
-                Basado en tu puntuación y perfil de respuestas, se sugiere: <strong>{triageRecommendation.recommendation}</strong>
+                Basado en tus respuestas, te sugerimos: <strong>{triageRecommendation.recommendation}</strong> 🎯
               </p>
-              {triageRecommendation.type === 'clinical' && (
+              {(triageRecommendation.type === 'clinical' || triageRecommendation.type === 'clinical-recommended') && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <p className="text-red-800 font-medium">
-                    ⚠️ Tu puntuación indica la necesidad de evaluación profesional prioritaria.
+                    {triageRecommendation.type === 'clinical' ? 
+                      '🚨 Es importante que busques ayuda profesional pronto.' :
+                      '⚠️ Te recomendamos considerar una evaluación profesional.'
+                    }
                   </p>
                 </div>
               )}
@@ -238,7 +256,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
             {/* Recommendation */}
             <div className={`bg-gradient-to-r ${data.gradient} bg-opacity-10 rounded-2xl p-6`}>
               <h2 className="text-xl font-bold text-gray-800 mb-4">
-                Próximos pasos:
+                🚀 ¿Qué hacer ahora?
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 {data.recommendation}
@@ -252,7 +270,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
                 className={`flex-1 bg-gradient-to-r ${safetyAlert ? 'from-red-600 to-red-700' : data.gradient} text-white font-semibold py-4 px-8 rounded-2xl hover:opacity-90 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2`}
               >
                 <MessageCircle className="w-5 h-5" />
-                <span>{safetyAlert ? 'Contacto Prioritario' : 'Quiero acompañamiento'}</span>
+                <span>{safetyAlert ? '🆘 Necesito ayuda ya' : '💬 Quiero conversar'}</span>
               </button>
 
               <button
@@ -260,22 +278,21 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
                 className="flex-1 bg-gray-200 text-gray-700 font-semibold py-4 px-8 rounded-2xl hover:bg-gray-300 transform hover:scale-105 transition-all duration-200 flex items-center justify-center space-x-2"
               >
                 <RefreshCw className="w-5 h-5" />
-                <span>Realizar Test Nuevamente</span>
+                <span>🔄 Hacer el test otra vez</span>
               </button>
             </div>
 
             {/* Disclaimer */}
             <div className="text-center text-sm text-gray-500 pt-4 border-t border-gray-200">
               <p>
-                ⚠️ IMPORTANTE: Este es un cuestionario de tamizaje, no un diagnóstico clínico.
+                ⚠️ IMPORTANTE: Este test es solo una orientación, no es un diagnóstico médico.
               </p>
               <p>
-                Los resultados son orientativos y no reemplazan la evaluación de un profesional de la salud mental.
-                Si experimentas malestar significativo o persistente, busca ayuda profesional.
+                Si te sientes mal o tienes dudas, siempre es mejor hablar con un profesional 👩‍⚕️👨‍⚕️
               </p>
               {safetyAlert && (
                 <p className="text-red-600 font-medium mt-2">
-                  Si tienes pensamientos de autolesión, contacta inmediatamente: Salud Responde 600 360 7777 o acude a urgencias.
+                  🚨 Si tienes pensamientos de hacerte daño, llama ya: Salud Responde 600 360 7777 o ve a urgencias.
                 </p>
               )}
             </div>

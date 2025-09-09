@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { questions, Question, safetyQuestion } from '../data/questions';
 
 export type AnswerValue = 0 | 1 | 2 | 3; // 0=Nunca o 1 día, 1=Varios días (2-6), 2=Más de la mitad (7-11), 3=Casi todos los días (12-14)
-export type ResultType = 'green' | 'yellow' | 'red';
+export type ResultType = 'green' | 'yellow' | 'orange' | 'red';
 
 export interface Answer {
   questionId: number;
@@ -82,16 +82,19 @@ export const useQuestionnaireLogic = () => {
       return sum + answer.value;
     }, 0);
     
-    // Puntos de corte basados en simulación:
-    // 0-17: Verde (Bienestar Estable)
-    // 18-19: Amarillo (Desgaste en Proceso)  
-    // ≥20: Rojo (Alerta Emocional)
+    // Puntos de corte distribuidos equitativamente:
+    // 0-11: Verde (Bienestar Estable)
+    // 12-22: Amarillo (Desgaste en Proceso)
+    // 23-33: Naranjo (Alerta Moderada)
+    // 34-45: Rojo (Alerta Emocional)
     let result: ResultType;
     
-    if (totalScore <= 17) {
+    if (totalScore <= 11) {
       result = 'green';
-    } else if (totalScore <= 19) {
+    } else if (totalScore <= 22) {
       result = 'yellow';
+    } else if (totalScore <= 33) {
+      result = 'orange';
     } else {
       result = 'red';
     }
@@ -143,32 +146,32 @@ export const useQuestionnaireLogic = () => {
     const redSubescales = [estresStatus, animoStatus, controlStatus].filter(s => s === 'red').length;
     const yellowSubescales = [estresStatus, animoStatus, controlStatus].filter(s => s === 'yellow').length;
     
-    // Reglas de triage
-    if (score >= 20 || redSubescales > 0) {
+    // Reglas de triage basadas en el resultado
+    if (result === 'red') {
       return {
         priority: 'high',
         recommendation: 'evaluación clínica prioritaria',
         type: 'clinical'
       };
-    } else if ((score >= 18 && score <= 19) || yellowSubescales >= 2) {
+    } else if (result === 'orange') {
+      return {
+        priority: 'medium-high',
+        recommendation: 'evaluación clínica recomendada',
+        type: 'clinical-recommended'
+      };
+    } else if (result === 'yellow') {
       return {
         priority: 'medium',
         recommendation: 'intervención breve estructurada',
         type: 'structured'
       };
-    } else if (result === 'green' && (yellowSubescales === 1 || redSubescales === 0)) {
+    } else {
       return {
         priority: 'low',
         recommendation: 'recomendaciones específicas de autocuidado',
         type: 'selfcare'
       };
     }
-    
-    return {
-      priority: 'low',
-      recommendation: 'mantener hábitos de bienestar',
-      type: 'maintenance'
-    };
   }, [calculateResult, calculateCategoryScores]);
 
   const resetQuestionnaire = useCallback(() => {
