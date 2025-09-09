@@ -110,7 +110,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
   const handleWhatsAppContact = () => {
     const phoneNumber = '56930179724';
     const personalizedMessage = userData 
-      ? `Hola! Soy ${userData.name}, acabo de completar el Test de Estado Emocional y mi resultado fue ${data.title.split(' – ')[1]} ${data.color}. ${data.whatsappMessage.split('. ')[1]}`
+      ? `Hola! Soy ${userData.name}, acabo de completar el Test de Estado Emocional y ${data.whatsappMessage}`
       : data.whatsappMessage;
     const message = encodeURIComponent(personalizedMessage);
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
@@ -265,14 +265,27 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-6">
+              {/* Botón de psiquiatría - solo para resultado rojo */}
+              {result === 'red' && (
+                <button
+                  onClick={() => window.open('https://www.origamis.cl/psiquiatria/', '_blank')}
+                  className="flex-1 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold py-4 px-8 rounded-2xl hover:opacity-90 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+                >
+                  <Heart className="w-5 h-5" />
+                  <span>🏥 agendar hora ya!</span>
+                </button>
+              )}
+
+              {/* Botón de WhatsApp - siempre visible */}
               <button
                 onClick={handleWhatsAppContact}
-                className={`flex-1 bg-gradient-to-r ${safetyAlert ? 'from-red-600 to-red-700' : data.gradient} text-white font-semibold py-4 px-8 rounded-2xl hover:opacity-90 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2`}
+                className={`flex-1 bg-gradient-to-r ${data.gradient} text-white font-semibold py-4 px-8 rounded-2xl hover:opacity-90 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2`}
               >
                 <MessageCircle className="w-5 h-5" />
-                <span>{safetyAlert ? '🆘 Necesito ayuda ya' : '💬 Quiero conversar'}</span>
+                <span>💬 Quiero conversar</span>
               </button>
 
+              {/* Botón de reiniciar - siempre visible */}
               <button
                 onClick={onRestart}
                 className="flex-1 bg-gray-200 text-gray-700 font-semibold py-4 px-8 rounded-2xl hover:bg-gray-300 transform hover:scale-105 transition-all duration-200 flex items-center justify-center space-x-2"
